@@ -1,0 +1,21 @@
+[package]
+name = "quaero_engines"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+#quaero_shared = { path = "../quaero_shared" }
+quaero_shared = { git = "https://github.com/quaero-search/quaero" }
+
+chrono = "0.4.42"
+phf = { version = "0.13.1", features = ["macros"] }
+
+# Async.
+async-trait = "0.1.89"
+
+# Http Clients.
+anyhttp = { git = "https://github.com/quaero-search/anyhttp" }
+
+# Html parsing.
+html_hybrid_parser = { "path" = "../html_hybrid_parser" }
+html-escape = "0.2.13"
