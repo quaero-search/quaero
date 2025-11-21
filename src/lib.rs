@@ -10,7 +10,7 @@
 //! };
 //!
 //! tokio::runtime::Runtime::new().unwrap().block_on(async {
-//!     let client = reqwest::Client::builder().build().unwrap();
+//!     let client = reqwest::Client::new();
 //!
 //!     let meta_engine = Quaero::empty(client);
 //!

@@ -9,7 +9,7 @@ async fn test() -> anyhow::Result<()> {
 
     tracing_subscriber::fmt::init();
 
-    let client = reqwest::Client::builder().build().unwrap();
+    let client = reqwest::Client::new();
 
     let meta_engine = Quaero::new(client, quaero_engines::default())
         .with_score_refiner(BertScoreRefiner::new(10))

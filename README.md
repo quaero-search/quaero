@@ -12,7 +12,7 @@ use quaero::{
 
 #[tokio::main]
 async fn main() {
-    let client = reqwest::Client::builder().build().unwrap();
+    let client = reqwest::Client::new();
 
     let meta_engine = Quaero::new(client, quaero_engines::default());
 
