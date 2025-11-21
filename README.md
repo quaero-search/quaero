@@ -10,7 +10,8 @@ use quaero::{
     models::search::{SafeSearch, SearchOptions},
 };
 
-tokio::runtime::Runtime::new().unwrap().block_on(async {
+#[tokio::main]
+async fn main() {
     let client = reqwest::Client::builder().build().unwrap();
 
     let meta_engine = Quaero::new(client, quaero_engines::default());
@@ -20,7 +21,7 @@ tokio::runtime::Runtime::new().unwrap().block_on(async {
         .safe_search(SafeSearch::Moderate);
 
     let response = meta_engine.search("What is ReactJs?", search_options).await;
-})
+}
 ```
 
 ## Installation
