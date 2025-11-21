@@ -1,6 +1,5 @@
 /target
 /crates/html_hybrid_parser/target
-/crates/kuchikiki/target
 /crates/quaero_bert/target
 /crates/quaero_engines/target
 /crates/quaero_shared/target

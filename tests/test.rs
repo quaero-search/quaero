@@ -11,7 +11,7 @@ async fn test() -> anyhow::Result<()> {
 
     let client = reqwest::Client::builder().build().unwrap();
 
-    let meta_engine = Quaero::new(client, quaero_engines::BraveEngine::new())
+    let meta_engine = Quaero::new(client, quaero_engines::default())
         .with_score_refiner(BertScoreRefiner::new(10))
         .await;
 
