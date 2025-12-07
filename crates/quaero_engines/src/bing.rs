@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
-use anyhttp::{
+use chrono::{TimeZone, Utc};
+use html_hybrid_parser::{ClassName, ClassNames, Node, Query, class_names_any, class_names_exact};
+use http::{
     HeaderMap, HeaderValue,
     header::{ACCEPT, CONTENT_TYPE, COOKIE, REFERER, USER_AGENT},
 };
-use chrono::{TimeZone, Utc};
-use html_hybrid_parser::{ClassName, ClassNames, Node, Query, class_names_any, class_names_exact};
 
 use quaero_shared::models::{
     engine::{Engine, TaggedEngine},

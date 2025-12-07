@@ -11,6 +11,7 @@ chrono = "0.4.42"
 smallvec = "1.15.1"
 itertools = "0.14.0"
 phf = { version = "0.13.1", features = ["macros"] }
+thiserror = "2.0.17"
 
 # Async.
 tokio = { version = "1.48.0", features = ["full"] }
@@ -18,6 +19,7 @@ async-trait = "0.1.89"
 
 # Http Clients.
 anyhttp = { git = "https://github.com/quaero-search/anyhttp" }
+http = "1.4.0"
 
 # URLs.
 urlencoding = "2.1.3"

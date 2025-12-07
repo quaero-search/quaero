@@ -1,8 +1,9 @@
 mod engine_id;
 use std::{any::type_name_of_val, sync::Arc};
 
-use anyhttp::{HeaderMap, HeaderValue, Response};
+use anyhttp::Response;
 pub use engine_id::*;
+use http::{HeaderMap, HeaderValue};
 use smallvec::SmallVec;
 
 use crate::models::search::{SearchError, SearchOptions, SearchResult};
@@ -44,7 +45,7 @@ pub trait Engine: Send + Sync {
     fn headers(&self, _headers: &mut HeaderMap<HeaderValue>, _options: &SearchOptions) {}
 
     /// Validates that the response is valid.
-    fn validate_response(&self, _response: &Response<Vec<u8>>) -> Result<(), SearchError> {
+    fn validate_response(&self, _response: &Response) -> Result<(), SearchError> {
         Ok(())
     }
 

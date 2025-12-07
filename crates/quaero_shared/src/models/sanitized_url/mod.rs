@@ -1,11 +1,12 @@
-use anyhttp::{AnyHttpClient, Request};
+use anyhttp::HttpClient;
+use http::Request;
 use itertools::Itertools;
 use phf::{phf_map, phf_set};
 use publicsuffix::{List, Psl};
 use std::{borrow::Cow, path::PathBuf, sync::LazyLock};
 use tokio::sync::RwLock;
 
-use crate::utils::{normalize_path::NormalizePath, string_clip::StringClip};
+use crate::utils::{NormalizePath, StringClip};
 
 // TODO: support strict sanitising hash.
 // TODO: support removing hash.
@@ -271,14 +272,13 @@ pub static PUBLIC_SUFFIX_LIST: LazyLock<RwLock<List>> = LazyLock::new(|| {
 });
 
 /// Fetches an up to date copy of the public suffix list.
-pub async fn refresh_public_suffix_list(
-    client: impl AnyHttpClient + 'static,
-) -> anyhow::Result<()> {
+pub async fn refresh_public_suffix_list(client: impl HttpClient + 'static) -> anyhow::Result<()> {
     let request =
         Request::get("https://publicsuffix.org/list/public_suffix_list.dat").body(vec![])?;
 
     let response = client.execute(request).await?;
-    let data = str::from_utf8(response.body())?;
+    let bytes = response.bytes().await?;
+    let data = str::from_utf8(&bytes)?;
 
     *PUBLIC_SUFFIX_LIST.write().await = data.parse::<List>().expect("failed to parse suffix list");
 

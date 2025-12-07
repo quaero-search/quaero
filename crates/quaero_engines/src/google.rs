@@ -1,11 +1,12 @@
 use std::borrow::Cow;
 
-use anyhttp::{
+use anyhttp::Response;
+use chrono::Duration;
+use html_hybrid_parser::{ClassNames, Node, Query, class_names_exact};
+use http::{
     HeaderMap, HeaderValue,
     header::{ACCEPT, COOKIE, REFERER, USER_AGENT},
 };
-use chrono::Duration;
-use html_hybrid_parser::{ClassNames, Node, Query, class_names_exact};
 
 use quaero_shared::models::{
     engine::{Engine, TaggedEngine},
@@ -73,7 +74,7 @@ impl Engine for GoogleEngine {
         headers.append(REFERER, HeaderValue::from_static("https://google.com/"));
     }
 
-    /*fn validate_response(&self, response: &Response<Vec<u8>>) -> Result<(), SearchError> {
+    fn validate_response(&self, response: &Response) -> Result<(), SearchError> {
         let url = response.url();
 
         let was_captcha_gated =
@@ -84,7 +85,7 @@ impl Engine for GoogleEngine {
         } else {
             Ok(())
         }
-    }*/
+    }
 
     fn parse<'a>(&self, response_text: String) -> Result<Vec<(String, SearchResult)>, SearchError> {
         let dom = html_hybrid_parser::Parser::fast_but_constrained(&response_text);
@@ -101,7 +102,7 @@ impl Engine for GoogleEngine {
 
                 let title = title_node
                     .get_first_node_with_classes(&TITLE_TEXT_CLASSES, parser)
-                    .map(|this| this.inner_text(parser).to_string())
+                    .and_then(|this| this.text(parser).map(|this| this.to_string()))
                     .unwrap_or_default();
 
                 let url = title_node

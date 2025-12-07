@@ -1,3 +1,7 @@
+//! A score refiner for Quaero that uses BERT.
+
+#![warn(missing_docs)]
+
 use anyhow::{Error, Result, anyhow};
 use candle_core::{Device, Tensor};
 use candle_nn::VarBuilder;

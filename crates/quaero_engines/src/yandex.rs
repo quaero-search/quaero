@@ -1,11 +1,12 @@
 use std::borrow::Cow;
 
-use anyhttp::{
-    HeaderMap, HeaderValue, Response,
-    header::{ACCEPT, REFERER, USER_AGENT},
-};
+use anyhttp::Response;
 use chrono::Datelike;
 use html_hybrid_parser::{ClassName, Node, Query, class_names_any};
+use http::{
+    HeaderMap, HeaderValue,
+    header::{ACCEPT, REFERER, USER_AGENT},
+};
 
 use quaero_shared::models::{
     engine::{Engine, TaggedEngine},
@@ -64,7 +65,7 @@ impl Engine for YandexEngine {
         ))
     }
 
-    fn validate_response(&self, response: &Response<Vec<u8>>) -> Result<(), SearchError> {
+    fn validate_response(&self, response: &Response) -> Result<(), SearchError> {
         if response.url().path().starts_with("/showcaptcha") {
             Err(SearchError::Captcha)
         } else {

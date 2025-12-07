@@ -1,4 +1,4 @@
-use anyhttp::HeaderValue;
+use http::HeaderValue;
 use rand::Rng;
 use std::borrow::Cow;
 

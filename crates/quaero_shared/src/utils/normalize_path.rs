@@ -1,6 +1,8 @@
 use std::path::{Component, Path, PathBuf};
 
+/// A trait that performs normalization on a path.
 pub trait NormalizePath {
+    /// Performs normalization.
     fn normalize(&self) -> PathBuf;
 }
 

@@ -12,7 +12,9 @@ use quaero::{
 
 #[tokio::main]
 async fn main() {
-    let client = reqwest::Client::new();
+    // We need to put the client in a wrapper
+    // as a workaround to rust's orphan rule.
+    let client = ReqwestClientWrapper::new(reqwest::Client::new());
 
     let meta_engine = Quaero::new(client, quaero_engines::default());
 
@@ -43,7 +45,7 @@ Here's an example using Bert to refine the top 10 search results.
 use quaero_bert::BertScoreRefiner;
 
 let meta_engine = Quaero::new(client, quaero_engines::default())
-    .with_score_refiner(BertScoreRefiner::new(10))
+    .score_refiner(BertScoreRefiner::new(10))
     .await;
 ```
 

@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-#quaero_shared = { path = "../quaero_shared" }
 quaero_shared = { git = "https://github.com/quaero-search/quaero" }
+# Local development.
+# quaero_shared = { path = "../quaero_shared" }
 
 anyhow = "1.0.100"
 

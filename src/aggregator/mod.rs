@@ -1,9 +1,9 @@
-use anyhttp::{AnyHttpClient, Request, StatusCode};
+use anyhttp::HttpClient;
+use http::{Request, StatusCode};
 use keyword_extraction::tokenizer::Tokenizer;
 use rayon::prelude::*;
 use std::{
     collections::HashMap,
-    fmt::Debug,
     sync::{Arc, LazyLock},
 };
 use tokio::task::JoinSet;
@@ -20,14 +20,11 @@ use quaero_shared::models::{
 use crate::{Quaero, aggregator::update_relevance::UpdateRelevance};
 
 #[inline(always)]
-pub async fn aggregate_results<HttpClient: AnyHttpClient + Send + Sync + 'static, const N: usize>(
-    quaero: &Quaero<HttpClient, N>,
+pub async fn aggregate_results<C: HttpClient + 'static, const N: usize>(
+    quaero: &Quaero<C, N>,
     query: &str,
     options: Arc<SearchOptions>,
-) -> SearchResponse
-where
-    <HttpClient as AnyHttpClient>::Error: Send + Debug,
-{
+) -> SearchResponse {
     info!("Commencing Quaero search!");
 
     let encoded_query = urlencoding::encode(query);
@@ -41,92 +38,121 @@ where
     let engines = &quaero.engines;
     let engines_len = engines.len();
 
+    let timeout_duration = quaero.timeout;
+
     for TaggedEngine(engine_id, engine) in engines {
         let engine_name = engine.name();
 
         info!("[{}] Fetching search results...", engine_name);
 
-        let (engine_id, engine) = (engine_id.clone(), engine.clone());
+        let (outer_engine_id, engine_id, engine) =
+            (engine_id.clone(), engine_id.clone(), engine.clone());
         let client = quaero.client.clone();
         let options = options.clone();
         let encoded_query = encoded_query.clone();
 
         tasks.spawn(async move {
-            let request_url = match engine.url(encoded_query.as_ref(), options.as_ref()) {
-                Ok(request_url) => request_url,
-                Err(search_error) => {
-                    error!(
-                        "[{}] Error when obtaining URL: {}",
-                        engine_name, search_error
-                    );
-                    return (engine_id, Err(search_error));
-                }
-            };
-
-            let mut request = match Request::get(request_url).body(vec![]) {
-                Ok(request) => request,
-                Err(err) => {
-                    error!("[{}] Failed to build request: {:#?}", engine_name, err);
-                    return (engine_id, Err(SearchError::RequestFailed));
-                }
-            };
-
-            engine.headers(request.headers_mut(), &options);
-
-            let response_result = client.execute(request).await;
-
-            let response = match response_result {
-                Ok(response) => response,
-                Err(err) => {
-                    error!("[{}] Failed to fetch results: {:#?}", engine_name, err);
-                    return (engine_id, Err(SearchError::RequestFailed));
-                }
-            };
-
-            if let Err(search_error) = engine.validate_response(&response) {
-                error!("[{}] Failed pre-parse check: {}", engine_name, search_error);
-                return (engine_id, Err(search_error));
-            }
-
-            if response.status() == StatusCode::TOO_MANY_REQUESTS {
-                error!(
-                    "[{}] Failed to fetch results: {}",
-                    engine_name,
-                    SearchError::Blocked
-                );
-                return (engine_id, Err(SearchError::Blocked));
-            }
-
-            let Ok(data) = String::from_utf8(response.into_body()) else {
-                error!("[{}] No response text was found.", engine_name);
-                return (engine_id, Err(SearchError::NoResponseText));
-            };
-
-            let results = tokio::task::spawn_blocking(move || engine.parse(data))
-                .await
-                .unwrap_or_else(|_| Err(SearchError::Unknown))
-                .and_then(|this| {
-                    if this.len() == 0 {
-                        Err(SearchError::NoResultsFound)
-                    } else {
-                        Ok(this)
+            let result = tokio::time::timeout(timeout_duration, async {
+                let request_url = match engine.url(encoded_query.as_ref(), options.as_ref()) {
+                    Ok(request_url) => request_url,
+                    Err(search_error) => {
+                        error!(
+                            "[{}] Error when obtaining URL: {}",
+                            engine_name, search_error
+                        );
+                        return (engine_id, Err(search_error));
                     }
-                });
+                };
 
-            let results = match results {
-                Ok(results) => results,
-                Err(search_error) => {
-                    error!(
-                        "[{}] Failed to parse results: {}",
-                        engine_name, search_error
-                    );
+                let mut request = match Request::get(request_url).body(vec![]) {
+                    Ok(request) => request,
+                    Err(err) => {
+                        error!("[{}] Failed to build request: {:#?}", engine_name, err);
+                        return (engine_id, Err(SearchError::RequestFailed));
+                    }
+                };
+
+                engine.headers(request.headers_mut(), &options);
+
+                let response_result = client.execute(request).await;
+
+                let response = match response_result {
+                    Ok(response) => response,
+                    Err(err) => {
+                        error!("[{}] Failed to fetch results: {:#?}", engine_name, err);
+                        return (engine_id, Err(SearchError::RequestFailed));
+                    }
+                };
+
+                if let Err(search_error) = engine.validate_response(&response) {
+                    error!("[{}] Failed pre-parse check: {}", engine_name, search_error);
                     return (engine_id, Err(search_error));
                 }
-            };
 
-            info!("[{}] Successfully fetched search results!", engine_name);
+                if response.status() == StatusCode::TOO_MANY_REQUESTS {
+                    error!(
+                        "[{}] Failed to fetch results: {}",
+                        engine_name,
+                        SearchError::Blocked
+                    );
+                    return (engine_id, Err(SearchError::Blocked));
+                }
 
-            (engine_id, Ok(results))
+                let bytes = match response.bytes().await {
+                    Ok(bytes) => bytes,
+                    Err(err) => {
+                        error!(
+                            "[{}] Failed to parse response text: {:#?}",
+                            engine_name, err
+                        );
+                        return (engine_id, Err(SearchError::RequestFailed));
+                    }
+                };
+
+                let Ok(data) = str::from_utf8(&bytes) else {
+                    error!("[{}] No response text was found.", engine_name);
+                    return (engine_id, Err(SearchError::NoResponseText));
+                };
+                let data = data.to_string();
+
+                let results = tokio::task::spawn_blocking(move || engine.parse(data))
+                    .await
+                    .unwrap_or_else(|_| Err(SearchError::Unknown))
+                    .and_then(|this| {
+                        if this.len() == 0 {
+                            Err(SearchError::NoResultsFound)
+                        } else {
+                            Ok(this)
+                        }
+                    });
+
+                let results = match results {
+                    Ok(results) => results,
+                    Err(search_error) => {
+                        error!(
+                            "[{}] Failed to parse results: {}",
+                            engine_name, search_error
+                        );
+                        return (engine_id, Err(search_error));
+                    }
+                };
+
+                info!("[{}] Successfully fetched search results!", engine_name);
+
+                (engine_id, Ok(results))
+            })
+            .await;
+
+            match result {
+                Ok(result) => result,
+                Err(_err) => {
+                    error!(
+                        "[{}] Could not fetch results within the allowed time limit.",
+                        engine_name
+                    );
+                    (outer_engine_id, Err(SearchError::Timeout))
+                }
+            }
         });
     }
 

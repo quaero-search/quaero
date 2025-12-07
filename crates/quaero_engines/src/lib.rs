@@ -1,3 +1,7 @@
+//! A collection of engines for Quaero that scrapes results from various search engines.
+
+#![warn(missing_docs)]
+
 use quaero_shared::models::engine::TaggedEngine;
 
 macro_rules! pub_use_modules {
@@ -11,6 +15,7 @@ macro_rules! pub_use_modules {
 
 pub_use_modules![bing, brave, google, mojeek, yahoo, yandex];
 
+/// Constructs a list of the default engines.
 #[inline(always)]
 pub fn default() -> [TaggedEngine; 6] {
     [
