@@ -1,8 +1,5 @@
 /target
-/crates/html_hybrid_parser/target
-/crates/quaero_bert/target
-/crates/quaero_engines/target
-/crates/quaero_shared/target
+/Cargo.lock
 
 # MacOS file system clutter.
 ._*
